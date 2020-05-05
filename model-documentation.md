@@ -62,3 +62,7 @@ Using the most desired d and s data, the trajectory generator will produce equal
 ## Future improvement
 - Jerk minimization should be included in the trajectory generator to ensure that the driving experience is the most comfortable.
 - In this trajectory generator implementation, the waypoints are equally spaced along the x direction, means that the acceleration could be instantaneously high at some points. Because of increasing or decreasing speeds, the waypoints should be modified to be more sparsely or more densely spaced.
+
+## Reference
+[Mithi's project](https://github.com/mithi/highway-path-planning)
+[Luu Thien Xuan's project](https://github.com/LUUTHIENXUAN/Udacity-CarND-P11-Path-Planning-Project)
