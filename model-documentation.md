@@ -12,6 +12,8 @@ This project aims to develop the autonomous stack for the car to drive in the hi
 
 I decided to seperate the behavior planner entirely from the trajectory generator. In a high level, the behavior planner processes the sensor fusion data and return the most efficient and safe behavior. Receiving the future behavior, the trajectory generator will create the path which the car will exactly follow.
 
+The screencast link: [Youtube](https://youtu.be/DcyLXSjdXWc)
+
 ![Top level architecture][toplevel]
 
 ## Behavior Planner
