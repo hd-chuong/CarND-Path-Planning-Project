@@ -11,7 +11,7 @@ using std::map;
 
 const double EFFICIENCY = 1;
 const double ADVANCE = 10;
-// const double REACH_GOAL = 0;
+const double REACH_GOAL = 0;
 const double STABILITY = 1;
 
 
@@ -79,27 +79,27 @@ float inefficiency_cost(const Vehicle &vehicle,
     return cost;
 }
 
-// float goal_distance_cost(const Vehicle & vehicle,
-//                         const vector<Vehicle> &trajectory,
-//                         const map<int, vector<Vehicle>> &predictions,
-//                         map<string, float> &data
-//                         )
-// {
-//     // Cost increases based on distance of intended lane (for planning a lane change) and final lane of trajectory.
-//     // Cost of being out of goal lane also becomes larger as vehicle approaches goal distance.
-//     // This function is very similar to what you have already implemented in th "Implement a Cost Function in C++" quiz.    
-//     float cost;
-//     float distance = data["distance_to_goal"];
-//     if (distance > 0)
-//     {
-//         cost = 1 - 2*exp(-(fabs(2.0 * vehicle.goal_lane - data["intended_lane"] - data["final_lane"]) / distance));
-//     }
-//     else
-//     {
-//         cost = 1;
-//     }
-//     return cost;
-// }
+float goal_distance_cost(const Vehicle & vehicle,
+                        const vector<Vehicle> &trajectory,
+                        const map<int, vector<Vehicle>> &predictions,
+                        map<string, float> &data
+                        )
+{
+    // Cost increases based on distance of intended lane (for planning a lane change) and final lane of trajectory.
+    // Cost of being out of goal lane also becomes larger as vehicle approaches goal distance.
+    // This function is very similar to what you have already implemented in th "Implement a Cost Function in C++" quiz.    
+    float cost;
+    float distance = data["distance_to_goal"];
+    if (distance > 0)
+    {
+        cost = 1 - 2*exp(-(fabs(2.0 * vehicle.goal_lane - data["intended_lane"] - data["final_lane"]) / distance));
+    }
+    else
+    {
+        cost = 1;
+    }
+    return cost;
+}
 
 float stability_cost(const Vehicle & vehicle,
                         const vector<Vehicle> &trajectory,

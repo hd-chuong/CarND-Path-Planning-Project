@@ -1,13 +1,25 @@
 # Model description: Path Planning in Highway Driving Scenarios
+
+[//]: # (Image References)
+
+[fsm]: ./images/state-machine.png "State Machine"
+[toplevel]: ./images/top-level.png "Top level architecture"
+[sigmoid]: ./images/sigmoid-curve.png "Sigmoid function"
+[function]: ./images/speed-change.png "Sigmoid function"
+
 ## Summary
 This project aims to develop the autonomous stack for the car to drive in the highway scenario. This path planner was able to keep the car in lane, change the lanes and keep the speed with other cars around it. 
 
 I decided to seperate the behavior planner entirely from the trajectory generator. In a high level, the behavior planner processes the sensor fusion data and return the most efficient and safe behavior. Receiving the future behavior, the trajectory generator will create the path which the car will exactly follow.
 
-# Behavior Planner
+![Top level architecture][toplevel]
+
+## Behavior Planner
 Compared to other settings, highway is relatively structured in the sense that all the driving signals, including lane lines, limit speeds are clearly defined. 
 
 A finite state machine (FSM) is used to choose the best next behavior. The FSM consists of five states, which are summarized in the following table
+
+![Finite State Machine][FSM]
 
 |           State             | Abbreviation |              Description                                   |
 |:---------------------------:|:------------:|:-----------------------------------------------------------|
@@ -40,7 +52,9 @@ Based on the costs, the behavior will the lowest cost will be selected as the ne
 ## Trajectory Generator       
 
 This generator first determines the next s, d position and speed. The s and d position comes directly from the most desired data package. However, because the car acceleration is limited to less than 10 m/s^2, the speed change should be less than this max acceleration. Based on the suggested speed from the package, we use a sigmoid-like function to determine the actual speed. This idea of sigmoid-like function comes from the observation that the change in current speed should be relatively proportional to the different between target speed and current speed, but this speed change must not exceed maximum acceleration. Therefore, I used the sigmoid function because it has two levelling-off ends.
+![Sigmoid curve][sigmoid]
 
+![Sigmoid function][function]
 Using the most desired d and s data, the trajectory generator will produce equally spaced waypoints in the s direction. To make sure that the transition in the path is smooth, the spline library is used. The points are first generated using the car coordinate system, then are translated and transformed back to the global coordinate system. 
 
 ## Future improvement
