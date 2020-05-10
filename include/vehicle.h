@@ -53,7 +53,7 @@ class Vehicle {
 
   void realize_next_state(vector<Vehicle> &trajectory);
 
-  void configure(vector<int> &road_data);
+  void configure(vector<double> &road_data);
 
   // public Vehicle variables
   struct collider{
@@ -64,11 +64,12 @@ class Vehicle {
   map<string, int> lane_direction = {{"PLCL", -1}, {"LCL", -1}, 
                                      {"LCR", 1}, {"PLCR", 1}};
 
-  vector<int> LANE_SPEEDS = {70,50,60};
+  vector<double> LANE_SPEEDS;
 
-  int preferred_buffer; // impacts "keep lane" behavior.
+  float preferred_buffer; // impacts "keep lane" behavior.
 
-  int lane, goal_lane, goal_s, previous_lane;
+  int lane, goal_lane, previous_lane;
+  double goal_s;
   int lanes_available = 3;
 
   float v;

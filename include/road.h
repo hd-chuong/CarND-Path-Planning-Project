@@ -10,7 +10,7 @@ class Road {
  public:
   const int LANE_WIDTH = 4;
   // Constructor
-  Road(int speed_limit, double traffic_density, std::vector<int> &lane_speeds);
+  Road(double speed_limit, double traffic_density, std::vector<double> &lane_speeds);
 
   // Destructor
   virtual ~Road();
@@ -24,7 +24,7 @@ class Road {
   void localize_ego(int s, int d);
   void display(int timestep);
   void set_vehicles(vector<Vehicle> & vehicles, vector<int> & new_ids);
-  void add_ego(int lane_num, int s, std::vector<int> &config_data);
+  void add_ego(int lane_num, int s, std::vector<double> &config_data);
 
   void cull();
 
@@ -43,7 +43,7 @@ class Road {
 
   std::string ego_rep = " *** ";
 
-  std::vector<int> lane_speeds; 
+  std::vector<double> lane_speeds; 
 
   // some helper function
   int get_lane(double d);

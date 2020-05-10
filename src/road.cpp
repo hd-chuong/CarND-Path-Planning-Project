@@ -14,7 +14,7 @@ using std::string;
 
 // Initializes Road
 
-Road::Road(int speed_limit, double traffic_density, vector<int> &lane_speeds) {
+Road::Road(double speed_limit, double traffic_density, vector<double> &lane_speeds) {
   this->num_lanes = lane_speeds.size();
   this->lane_speeds = lane_speeds;
   this->speed_limit = speed_limit;
@@ -113,7 +113,7 @@ map<int, vector<Vehicle>> Road::predict()
 //   }   
 // }
 
-void Road::add_ego(int lane_num, int s, vector<int> &config_data) {
+void Road::add_ego(int lane_num, int s, vector<double> &config_data) {
   map<int, Vehicle>::iterator it = this->vehicles.begin();
 
   while (it != this->vehicles.end()) {

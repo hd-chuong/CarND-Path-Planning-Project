@@ -10,8 +10,13 @@
 using std::string;
 using std::vector;
 
+// too much buffer (40) leads to other car fill in in front of ego
+// too narrow buffer hard to turn
 
-
+const double BUFFER = 25; 
+const double MAX_SPEED = 21.5;
+const double MAX_ACCEL = 9;
+const double GOAL_S = 1000000.0;
 Vehicle::Vehicle(){}
 
 Vehicle::Vehicle(int lane, float s, float v, float a, string state)
@@ -22,10 +27,12 @@ Vehicle::Vehicle(int lane, float s, float v, float a, string state)
     this->v = v;
     this->a = a;
     this->state = state;
-    this->max_acceleration = 3;
+    this->max_acceleration = MAX_ACCEL;
+    this->LANE_SPEEDS = {MAX_SPEED,MAX_SPEED,MAX_SPEED};
     this->target_speed = this->LANE_SPEEDS[lane];
     this->previous_lane = this->lane;
-    this->LANE_SPEEDS = {48,48,48};
+    this->preferred_buffer = BUFFER; 
+    this->goal_s = GOAL_S;
 }
 
 Vehicle::Vehicle(const Vehicle & v)
@@ -36,11 +43,13 @@ Vehicle::Vehicle(const Vehicle & v)
     this->v = v.v;
     this->a = v.a;
     this->state = v.state;
+    this->LANE_SPEEDS = v.LANE_SPEEDS;
     this->max_acceleration = v.max_acceleration;
     this->target_speed = v.target_speed;
     this->previous_lane = v.previous_lane;
     this->yaw = v.yaw;
-    this->preferred_buffer = 50;
+    this->preferred_buffer = BUFFER;
+    this->goal_s = v.goal_s;
 }
 
 Vehicle& Vehicle::operator=( const Vehicle& v ) {
@@ -54,8 +63,9 @@ Vehicle& Vehicle::operator=( const Vehicle& v ) {
     this->target_speed = v.target_speed;
     this->previous_lane = v.previous_lane;
     this->yaw = v.yaw;
-    this->preferred_buffer = 50;
-
+    this->preferred_buffer = BUFFER;
+    this->LANE_SPEEDS = v.LANE_SPEEDS;
+    this->goal_s = v.goal_s;
     return *this;
 }
 
@@ -63,7 +73,7 @@ Vehicle::~Vehicle() {}
 
 vector<Vehicle> Vehicle::choose_next_state(map<int, vector<Vehicle>> & predictions)
 {
-    std::cout << "start choose next state " << std::endl;
+    //std::cout << "start choose next state " << std::endl;
     vector<string> states = successor_states();
     double cost;
     vector<double> costs;
@@ -84,7 +94,7 @@ vector<Vehicle> Vehicle::choose_next_state(map<int, vector<Vehicle>> & predictio
             final_trajectories.push_back(trajectory);
             costs.push_back(1e8);
         }
-        std::cout << "State: " << *it << ". cost " << costs.back() << std::endl;
+        //std::cout << "State: " << *it << ". cost " << costs.back() << std::endl;
     }
 
     double best_idx = -1;
@@ -112,10 +122,10 @@ vector<Vehicle> Vehicle::choose_next_state(map<int, vector<Vehicle>> & predictio
     std::cout << "best idx " << best_idx;
     std::cout << " cost " << costs[best_idx];
     std::cout << " state " << states[best_idx] << std::endl;  
-    Vehicle next_state = final_trajectories[best_idx][1];
+    //Vehicle next_state = final_trajectories[best_idx][1];
     
-    std::cout << "best behavior: " << states[best_idx] << ". Current state: " << this->state << ". Next lane " << next_state.lane << std::endl;
-    std::cout << "end choose next state " << std::endl;
+    //std::cout << "best behavior: " << states[best_idx] << ". Current state: " << this->state << ". Next lane " << next_state.lane << std::endl;
+    // std::cout << "end choose next state " << std::endl;
     //std::cout << "Current Pos: " << this->s << ". Vel:" << this->v << ". Accel: " << this->a << std::endl;
     //std::cout << "Current Pos: " << next_state.s << ". Vel:" << next_state.v << ". Accel: " << next_state.a << std::endl;
     //return keep_lane_trajectory(predictions);
@@ -155,7 +165,7 @@ vector<string> Vehicle::successor_states()
         if (this->d - this->previous_lane * 4 - 2 >= 2)
         {
             std::cout << "Previous lane " << this->previous_lane << std::endl;
-            //states.pop_back();
+            // states.pop_back();
             states.push_back("LCL");
             //states.push_back("PLCL");
         }
@@ -165,7 +175,7 @@ vector<string> Vehicle::successor_states()
          if (this->d - this->previous_lane * 4 - 2 <=  -2)
          {
              std::cout << "Previous lane "<< this->previous_lane << std::endl;
-            //states.pop_back();
+            // states.pop_back();
             states.push_back("LCR");
             //states.push_back("PLCR");
         }
@@ -213,8 +223,10 @@ vector<float> Vehicle::get_kinematics(map<int, vector<Vehicle>> &predictions, in
     //std::cout << "buffer " << this->preferred_buffer << std::endl; 
     if (get_vehicle_ahead(predictions, new_lane, vehicle_ahead))
     {
+        //std::cout <<"vehicle ahead !! Lane " << new_lane << "other vec " << vehicle_ahead.v << std::endl;
         //std::cout << "!!!! Vehicle ahead!" << std::endl;
-        target_v = vehicle_ahead.v;
+        if (fabs(vehicle_ahead.s - vehicle_ahead.v - this->s) <= 40) 
+        target_v = std::max(vehicle_ahead.v - 20.0, 0.5);
         // if (get_vehicle_behind(predictions, lane, vehicle_behind))
         // {
         //     target_v = vehicle_ahead.v;
@@ -258,7 +270,7 @@ vector<Vehicle> Vehicle::keep_lane_trajectory(map<int, vector<Vehicle>> & predic
 {
 
     vector<Vehicle> trajectory = {
-        Vehicle(lane, this->s, this->v, this->a, this->state)
+        Vehicle(this->lane, this->s, this->v, this->a, this->state)
     };
 
     vector<float> kinematics = get_kinematics(predictions, this->lane);
@@ -266,7 +278,7 @@ vector<Vehicle> Vehicle::keep_lane_trajectory(map<int, vector<Vehicle>> & predic
     float new_v = kinematics[1];
     float new_a = kinematics[2];
     //std::cout << "new s: " << new_s << ". new v: " << new_v << ". new a: " << new_a << std::endl;   
-    trajectory.push_back(Vehicle(lane, new_s, new_v, new_a, "KL"));
+    trajectory.push_back(Vehicle(this->lane, new_s, new_v, new_a, "KL"));
     return trajectory;
 }
 
@@ -328,17 +340,38 @@ vector<Vehicle> Vehicle::lane_change_trajectory(string state, map<int, vector<Ve
 
     if (new_lane > 2 || new_lane < 0) return trajectory;
 
-    Vehicle next_lane_vehicle;
+    Vehicle next_lane_vehicle, this_lane_vehicle;
 
+    // now
+    for (auto it = predictions.begin(); it != predictions.end(); ++it)
+    {
+        this_lane_vehicle = it->second[0];
+        if (this_lane_vehicle.lane == this->lane)
+        {
+            bool tooCloseNow = fabs(this_lane_vehicle.s - this->s - this_lane_vehicle.v) <= 15;
+            if (tooCloseNow)
+            {
+                return trajectory;
+            }
+        }
+    }
+
+    // when for new lane
     for (auto it = predictions.begin(); it != predictions.end(); ++it)
     {
         next_lane_vehicle = it->second[0];
         //std::cout << "check predictions lane change" << std::endl;
         //std::cout << "id: " << it->first << ". "  << next_lane_vehicle.lane << " ego " << "new lane " << new_lane << "current lane" << this->lane << std::endl;
-        if (fabs(next_lane_vehicle.s - this->s) < 15 && (next_lane_vehicle.lane == new_lane || next_lane_vehicle.lane == this->lane)) //|| next_lane_vehicle.previous_lane == new_lane))
+        // if (next_lane_vehicle.lane == new_lane || next_lane_vehicle.lane == this->lane)
+        //     std::cout << "Predict s = " << next_lane_vehicle.s << " " << "Predict ego " << this->s + this->v << "new lane " << new_lane << "current lane " << this->lane << std::endl;
+        if ((next_lane_vehicle.lane == new_lane || next_lane_vehicle.lane == this->lane)) //|| next_lane_vehicle.previous_lane == new_lane))
         {
+            bool tooClose = fabs(next_lane_vehicle.s - this->s - this->v) <= 20;
+            bool egoOvertake = (this->s + this-> v >= next_lane_vehicle.s) && (next_lane_vehicle.s - next_lane_vehicle.v >= this->s);
+            bool otherOvertake = (this->s + this-> v <= next_lane_vehicle.s) && (next_lane_vehicle.s - next_lane_vehicle.v <= this->s);
             // return empty trajectory
-            return trajectory;
+            if (tooClose || egoOvertake || otherOvertake)
+                return trajectory;
         }
         //std::cout << "end predictions lane change" << std::endl;
     }
@@ -377,12 +410,13 @@ bool Vehicle::get_vehicle_behind(map<int, vector<Vehicle>> & predictions, int la
     int max_s = -1;
     bool found_vehicle = false;
     Vehicle temp_vehicle;
+    double next_s = this->v + this->s;
     for (map<int, vector<Vehicle> >::iterator it = predictions.begin(); it != predictions.end(); ++it)
     {
         temp_vehicle = it->second[0];
         if (temp_vehicle.lane == lane 
-        && temp_vehicle.s < this->s
-        && temp_vehicle.s > this->s - this->preferred_buffer
+        && temp_vehicle.s <= next_s
+        && temp_vehicle.s >= next_s - this->preferred_buffer
         && temp_vehicle.s > max_s)
         {
             max_s = temp_vehicle.s;
@@ -400,18 +434,28 @@ bool Vehicle::get_vehicle_ahead(map<int, vector<Vehicle> > & predictions, int la
 
     Vehicle temp_vehicle;
     //std::cout << "This s = " << this->s << ". This d = " << this->d << std::endl;
+    
+    double next_s = this->s+ this->v;
     for (map<int, vector<Vehicle>>::iterator it = predictions.begin(); it != predictions.end(); ++it)
     {
         temp_vehicle = it->second[0];
-        //std::cout << "other s = " << temp_vehicle.s << ". other d = " << temp_vehicle.d << std::endl;
-        if ((temp_vehicle.lane == lane) 
-        && (temp_vehicle.s >= this->s) 
-        && (temp_vehicle.s < this->s + this->preferred_buffer) 
-        &&  (temp_vehicle.s < min_s))
+        //std::cout << "next s = " << next_s << ". cur v = " << this->v << " ** lane " << lane << " other s = " << temp_vehicle.s << ". other v = " << temp_vehicle.v << "other lane " << temp_vehicle.lane << std::endl;
+        if ((temp_vehicle.lane == lane) && (temp_vehicle.s < min_s)) 
         {
-            min_s = temp_vehicle.s;
-            rVehicle = temp_vehicle;
-            found_vehicle = true;
+            double temp_cur_s = temp_vehicle.s - temp_vehicle.v;
+            bool futureTooClose = (temp_vehicle.s >= next_s) && (temp_vehicle.s <= next_s + this->preferred_buffer) ;
+            bool nowTooClose = (temp_cur_s >= this->s) && (temp_cur_s <= this->s + this->preferred_buffer);
+            //bool egoSurpass = (next_s >= temp_vehicle.s) && (this->s <= temp_vehicle.s - temp_vehicle.v);
+            //bool otherSurpass = (next_s <= temp_vehicle.s) && (this->s >= temp_vehicle.s - temp_vehicle.v);
+            if (futureTooClose || nowTooClose)
+            {
+                if (temp_vehicle.s < min_s)
+                {
+                    min_s = temp_vehicle.s;
+                    rVehicle = temp_vehicle;
+                    found_vehicle = true;
+                }
+            }
         }
     }
 
@@ -423,17 +467,18 @@ vector<Vehicle> Vehicle::generate_predictions(int horizon)
     //std::cout << "s = " << this->s << ". v = " << this->v << std::endl;
     // Generates predictions for non-ego vehicles to be used in trajectory generator for the ego vehicle.
     vector<Vehicle> predictions;
-    for (int i = 0; i < horizon; ++i)
-    {
-        float next_s = position_at(i);
-        float next_v = this->v;
-        if (i < horizon-1)
-        {
-            next_v = position_at(i+1) - position_at(i);
-        }
-        //std::cout << "next_s = " << next_s << ". next_v = " << next_v << std::endl;
-        predictions.push_back(Vehicle(this->lane, next_s, next_v, 0, "CS"));
-    }
+    // for (int i = 0; i < horizon; ++i)
+    // {
+    //     float next_s = position_at(i);
+    //     float next_v = this->v;
+    //     if (i < horizon-1)
+    //     {
+    //         next_v = position_at(i+1) - position_at(i);
+    //     }
+    //     //std::cout << "next_s = " << next_s << ". next_v = " << next_v << std::endl;
+    //     predictions.push_back(Vehicle(this->lane, next_s, next_v, 0, "CS"));
+    // }
+    predictions.push_back(Vehicle(this->lane, position_at(1), this->v, 0, "CS"));
     return predictions;
 }
 
@@ -447,14 +492,13 @@ void Vehicle::realize_next_state(vector<Vehicle> & trajectory)
     this->a = next_state.a;
 }
 
-void Vehicle::configure(vector<int> & road_data)
+void Vehicle::configure(vector<double> & road_data)
 {
     // Called by simulator before simulation begins. Sets various parameters which will impact the ego vehicle.
     target_speed = road_data[0];
-    lanes_available = road_data[1];
-    goal_s = road_data[2];
-    goal_lane = road_data[3];
-    max_acceleration = road_data[4];
+    lanes_available = 3;
+    goal_s = road_data[1];
+    max_acceleration = road_data[2];
 }
 
 void Vehicle::update(double x, double y, double s, double d, double v, double yaw, string state) {
@@ -466,10 +510,9 @@ void Vehicle::update(double x, double y, double s, double d, double v, double ya
     this->v = v;
     this->yaw = yaw;
     //std::cout << "update in vechivle " << this->v << std::endl; 
-    this->preferred_buffer = this->v > 50 ? this->v : 50;
+    this->preferred_buffer = BUFFER;//this->v > 20 ? this->v : 20;
     this->state = state;
-    this->max_acceleration = 3;
-
+    this->max_acceleration = MAX_ACCEL;
     //this->preferred_buffer = 50;
     //std::cout << this->state << std::endl;
     // if (this->state.compare("KL") == 0 || this->state.compare("PLCL") == 0 || this->state.compare("PLCR") == 0)
@@ -494,7 +537,8 @@ void Vehicle::update(double x, double y, double s, double d, double v, double ya
     //this->previous_lane = this->lane;
     this->lane = (int) d / 4.0;
 
-    this->LANE_SPEEDS = {48,48,48};
+    this->LANE_SPEEDS = {MAX_SPEED,MAX_SPEED,MAX_SPEED};
     this->target_speed = this->LANE_SPEEDS[this->lane];
+    this->goal_s = GOAL_S;
     //std::cout << this->state.size() << std::endl;
 }

@@ -75,7 +75,7 @@ float inefficiency_cost(const Vehicle &vehicle,
     float possible_speed = trajectory[1].v;
     //std::cout << "Possible speed = " << possible_speed;
     float cost = 2 * vehicle.target_speed - possible_speed - trajectory[0].v;
-    std::cout << "cur lane " << vehicle.lane << " target speed " << vehicle.target_speed << " . possible speed " << possible_speed << " current speed " << trajectory[0].v << std::endl;
+    //std::cout << "cur lane " << vehicle.lane << " target speed " << vehicle.target_speed << " . possible speed " << possible_speed << " current speed " << trajectory[0].v << std::endl;
     return cost;
 }
 

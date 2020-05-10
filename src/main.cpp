@@ -1,3 +1,6 @@
+//cur issue: too close in the old lane to turn
+//speed varies lots although modifying
+
 #include <uWS/uWS.h>
 #include <fstream>
 #include <iostream>
@@ -21,23 +24,22 @@ using std::endl;
 
 const int EGO_KEY = -1;
 
-double max_s = 6945.554;
+double max_s = 1000000.0;
 
-double SPEED_LIMIT = 48;
+double SPEED_LIMIT = 22;
 
-vector<int> LANE_SPEEDS = {48,48,48};
+vector<double> LANE_SPEEDS = {SPEED_LIMIT,SPEED_LIMIT,SPEED_LIMIT};
 
 double TRAFFIC_DENSITY = 0.15;
 
-int MAX_ACCEL = 3;
+double MAX_ACCEL = 9;
 
 double goal_s = max_s;
-int goal_lane = 1;
 
 // implement (1 - e^(-x)) / (1 + e^x)
 double delta_sigmoid(double x)
 {
-  return (1 - exp(-0.1* x)) / (1 + exp(-0.1 * x));
+  return (1 - exp(- x)) / (1 + exp(- x));
 }
 
 int main() {
@@ -54,17 +56,18 @@ int main() {
   //
   int lane = 1;
   int num_lanes = LANE_SPEEDS.size();
-  vector<int> ego_config = {SPEED_LIMIT, num_lanes, (int) goal_s, goal_lane, MAX_ACCEL};
+  vector<double> ego_config = {SPEED_LIMIT, goal_s, MAX_ACCEL};
   //
   //
   Road road = Road(SPEED_LIMIT, TRAFFIC_DENSITY, LANE_SPEEDS);
 
   road.add_ego(lane, 0, ego_config);
-  int count = 0;
+
   // Waypoint map to read from
   string map_file_ = "../data/highway_map.csv";
   // The max s value before wrapping around the track back to 0
 
+  double ref_speed = 0;
 
   std::ifstream in_map_(map_file_.c_str(), std::ifstream::in);
 
@@ -93,7 +96,7 @@ int main() {
                 &map_waypoints_s,
                &map_waypoints_dx,
                &map_waypoints_dy,
-               &lane, &justStart, &count, &road]
+               &lane, &justStart, &road]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -119,7 +122,7 @@ int main() {
           double car_d = j[1]["d"];
           double car_yaw = j[1]["yaw"];
           double car_speed = j[1]["speed"];
-
+          car_speed = car_speed / 2.237;
           // Previous path data given to the Planner
           auto previous_path_x = j[1]["previous_path_x"];
           auto previous_path_y = j[1]["previous_path_y"];
@@ -133,9 +136,9 @@ int main() {
 
           json msgJson;
 
-        double ref_vel = car_speed;
+        //double ref_vel = car_speed;
 
-        int prev_size = previous_path_x.size();
+        //int prev_size = previous_path_x.size();
 
           Vehicle ego = road.get_ego();
           
@@ -155,10 +158,15 @@ int main() {
             double s = sensor_fusion[i][5];
             double d =sensor_fusion[i][6];
             double v = sqrt(vx*vx+vy*vy);
+            //std::cout << v << std::endl;
             Vehicle new_car;
             new_car.update(x, y, s, d, v, atan2(vy, vx), (string) "KL");
             other_cars.push_back(new_car);
-            //std::cout << "s: " << s << " d: " << d << std::endl;
+            // if (sqrt(pow(x-car_x, 2) + pow(y-car_y,2)) < 2 && (int) car_d / 4 == (int) d / 4) {
+            //   std::cout << "collision ego " << car_s << " " << s;
+            //   throw "fail";
+            // }
+            // //std::cout << "s: " << s << " d: " << d << std::endl;
           }
           road.set_vehicles(other_cars, other_ids);
 
@@ -183,7 +191,12 @@ int main() {
           {
             next_d = next_lane * 4 + 2.5;
             //next_s = ego_best_state[1].s;
-            target_speed = target_speed = ego.get_kinematics(other_car_predictions, ego.lane)[1];
+            target_speed = ego.get_kinematics(other_car_predictions, ego.lane)[1];
+          }
+          else if (ego.state == "LCL" || ego.state == "LCR")
+          {
+            next_d = next_lane * 4 + 2;
+            target_speed = ego.get_kinematics(other_car_predictions, ego.lane)[1];
           }
           else 
           {
@@ -191,16 +204,34 @@ int main() {
             //next_s = ego_best_state[1].s;
             target_speed = ego_best_state[1].v;
           }
+          // std::cout <<" current speed " << ego.v <<  " target speed" << target_speed << std::endl;
+          std::cout << "delta coeff " << delta_sigmoid(target_speed - ego.v) << std::endl;
           next_speed = ego.v + delta_sigmoid(target_speed - ego.v) * ego.max_acceleration;
-          std::cout << "real next d " << next_d << " lane. " << next_lane << " real next speed " << next_speed << std::endl;
+          // if (ego.v <= target_speed)
+          // {
+          //   next_speed = std::min(SPEED_LIMIT, ego.v + 0.224);
+          // }
+          // else {
+          //   next_speed = std::max(2.0, ego.v - 0.224);
+          // }
+          // Vehicle dummyVehicle;
+          // if (!ego.get_vehicle_ahead(other_car_predictions, ego.lane, dummyVehicle))
+          // {
+          //   rel_speed = std::min(SPEED_LIMIT, rel_speed + 0.224);
+          // }
+          // else {
+          //   rel_speed = std::max(2.0, rel_speed - 0.224);
+          // }
+          //std::cout << "real next d " << next_d << " lane. " << next_lane << " real next speed " << next_speed << std::endl;
           next_s = ego.s + (ego.v + next_speed) / 2; 
           ego.lane = next_lane;
+          //next_speed = rel_speed;
           if (justStart) 
           {
-            next_s += 20.0; 
+            next_s += 20.0 / 2.24; 
             justStart = false;
           }
-          
+          //std::cout << "cur s " << ego.s << " next s " << next_s << std::endl;
           road.vehicles[EGO_KEY] = ego;
           road.vehicles[EGO_KEY].state = ego.state;
                     
@@ -210,7 +241,10 @@ int main() {
           double ref_yaw = deg2rad(car_yaw);
           vector<double> ptsx;
           vector<double> ptsy;
+          //std::cout << "prev size " <<prev_size << std::endl; 
           
+          int prev_size = std::min((int) previous_path_x.size(), 10);
+
           if ( prev_size < 2 ) {
               // There are not too many...
               double prev_car_x = car_x - cos(car_yaw);
@@ -242,9 +276,9 @@ int main() {
           
           //vector<double> raw_traj_x, raw_traj_y;
 
-          vector<double> targetXY = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-          vector<double> next_wp2 = getXY(next_s + 15, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-          vector<double> next_wp3 = getXY(next_s + 30, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> targetXY = getXY(next_s + 25, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp2 = getXY(next_s + 50, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp3 = getXY(next_s + 75, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
           
           double target_x = targetXY[0];
           double target_y = targetXY[1];
@@ -291,40 +325,64 @@ int main() {
            *   sequentially every .02 seconds
            */
 
+          // std::cout << "Test spline " << std::endl;
+          // for (int i = 0; i < ptsx.size(); ++i)
+          // {
+          //   std::cout << ptsx[i] << " ";
+          // }
+
+          cout << std::endl;
           cout << "------------------------------------------" << endl;
           tk::spline smooth;
           smooth.set_points(ptsx, ptsy);
           
-          for (int i = 0; i < previous_path_x.size(); ++i) {
+          for (int i = 0; i < prev_size; ++i) {
             next_x_vals.push_back(previous_path_x[i]);
             next_y_vals.push_back(previous_path_y[i]);
           }          
           
           vector<double> target_point = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
           
-          double last_x, last_y;
-          if (prev_size > 0) {
-            last_x = previous_path_x[prev_size - 1];
-            last_y = previous_path_y[prev_size - 1];
-          } 
-          else {
-            last_x = car_x;
-            last_y = car_y;
-          }
+          // double last_x, last_y;
+          // if (prev_size > 0) {
+          //   last_x = previous_path_x[prev_size - 1];
+          //   last_y = previous_path_y[prev_size - 1];
+          // } 
+          // else {
+          //   last_x = car_x;
+          //   last_y = car_y;
+          // }
 
           // double x_dist = target_x - last_x;
           // double y_dist = target_y - last_y;
-          double x_next = 30.0;
+          //std::cout << "next_speed " << next_speed << std::endl;
+          double x_next = 30;
           double y_next = smooth(x_next);
           double target_dist = sqrt(x_next * x_next + y_next * y_next);
-          double N = target_dist / (0.02 * next_speed / 2.24)  ;
-          
-          int number_point_left = previous_path_x.size();
+          double N = target_dist / (0.02 * next_speed)  ;
+          //std::cout << "N = " << N << " target dist " << target_dist << std::endl;
+          int number_point_left = prev_size;
 
-          for (int i = 1; i <= 50 - previous_path_x.size() && number_point_left < 5; ++i)
+          //std::cout << x_next << " " << y_next << std::endl;
+          
+          double inc_speed = 0;
+          if (50 - prev_size > 0)
           {
-            double x_point = x_next / N * i;
+            double speed_diff = next_speed - car_speed;
+            inc_speed = speed_diff / (50 - prev_size);
+
+          }
+
+          double instant_speed = car_speed;
+          double x_continue = 0;
+          for (int i = 1; i <= 50 - prev_size /*&& number_point_left < 40*/; ++i)
+          {
+            instant_speed = car_speed + inc_speed * i;
+            // double x_point = x_next / N * i;
+            // double x_point = 0.02 * next_speed * i;
+           double x_point = x_continue + instant_speed * 0.02;
             double y_point = smooth(x_point);
+            x_continue = x_point;
             double x_ref = x_point;
             double y_ref = y_point;
 
