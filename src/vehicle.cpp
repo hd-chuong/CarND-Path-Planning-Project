@@ -13,7 +13,7 @@ using std::vector;
 // too much buffer (40) leads to other car fill in in front of ego
 // too narrow buffer hard to turn
 
-const double BUFFER = 25; 
+const double BUFFER = 30; 
 const double MAX_SPEED = 21.5;
 const double MAX_ACCEL = 9;
 const double GOAL_S = 1000000.0;
@@ -364,7 +364,7 @@ vector<Vehicle> Vehicle::lane_change_trajectory(string state, map<int, vector<Ve
         //std::cout << "id: " << it->first << ". "  << next_lane_vehicle.lane << " ego " << "new lane " << new_lane << "current lane" << this->lane << std::endl;
         // if (next_lane_vehicle.lane == new_lane || next_lane_vehicle.lane == this->lane)
         //     std::cout << "Predict s = " << next_lane_vehicle.s << " " << "Predict ego " << this->s + this->v << "new lane " << new_lane << "current lane " << this->lane << std::endl;
-        if ((next_lane_vehicle.lane == new_lane || next_lane_vehicle.lane == this->lane)) //|| next_lane_vehicle.previous_lane == new_lane))
+        if ((next_lane_vehicle.lane == new_lane)) //|| next_lane_vehicle.previous_lane == new_lane))
         {
             bool tooClose = fabs(next_lane_vehicle.s - this->s - this->v) <= 20;
             bool egoOvertake = (this->s + this-> v >= next_lane_vehicle.s) && (next_lane_vehicle.s - next_lane_vehicle.v >= this->s);
