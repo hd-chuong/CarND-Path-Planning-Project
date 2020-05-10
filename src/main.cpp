@@ -276,9 +276,9 @@ int main() {
           
           //vector<double> raw_traj_x, raw_traj_y;
 
-          vector<double> targetXY = getXY(next_s + 25, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-          vector<double> next_wp2 = getXY(next_s + 50, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-          vector<double> next_wp3 = getXY(next_s + 75, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> targetXY = getXY(next_s + 20, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp2 = getXY(next_s + 30, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          vector<double> next_wp3 = getXY(next_s + 40, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
           
           double target_x = targetXY[0];
           double target_y = targetXY[1];
