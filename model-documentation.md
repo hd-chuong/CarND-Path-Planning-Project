@@ -12,6 +12,8 @@ This project aims to develop the autonomous stack for the car to drive in the hi
 
 I decided to seperate the behavior planner entirely from the trajectory generator. In a high level, the behavior planner processes the sensor fusion data and return the most efficient and safe behavior. Receiving the future behavior, the trajectory generator will create the path which the car will exactly follow.
 
+The screencast link: [Youtube](https://youtu.be/DcyLXSjdXWc)
+
 ![Top level architecture][toplevel]
 
 ## Behavior Planner
@@ -60,3 +62,7 @@ Using the most desired d and s data, the trajectory generator will produce equal
 ## Future improvement
 - Jerk minimization should be included in the trajectory generator to ensure that the driving experience is the most comfortable.
 - In this trajectory generator implementation, the waypoints are equally spaced along the x direction, means that the acceleration could be instantaneously high at some points. Because of increasing or decreasing speeds, the waypoints should be modified to be more sparsely or more densely spaced.
+
+## Reference
+[Mithi's project](https://github.com/mithi/highway-path-planning)
+[Luu Thien Xuan's project](https://github.com/LUUTHIENXUAN/Udacity-CarND-P11-Path-Planning-Project)
